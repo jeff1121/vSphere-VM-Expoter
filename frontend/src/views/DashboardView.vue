@@ -1,0 +1,155 @@
+<script setup>
+import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import { useTaskStore } from '../stores/task'
+import { fetchVms } from '../services/vmService'
+
+const authStore = useAuthStore()
+const taskStore = useTaskStore()
+const router = useRouter()
+
+const loading = ref(false)
+const vms = ref([])
+const error = ref('')
+const exportingId = ref('')
+const search = ref('')
+let pollHandle = null
+
+const headers = [
+  { title: 'ID', key: 'id' },
+  { title: '名稱', key: 'name' },
+  { title: '電源狀態', key: 'powerState' },
+  { title: '配置容量 (bytes)', key: 'provisionedBytes' },
+  { title: '動作', key: 'actions', sortable: false },
+]
+
+const loadVms = async () => {
+  if (!authStore.sessionId) {
+    router.push('/')
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  try {
+    vms.value = await fetchVms(authStore.sessionId)
+  } catch (err) {
+    error.value = err?.response?.data || '無法取得 VM 列表'
+  } finally {
+    loading.value = false
+  }
+}
+
+const startExport = async (vmId) => {
+  if (!authStore.sessionId) return
+  exportingId.value = vmId
+  const taskId = await taskStore.startExport(authStore.sessionId, vmId)
+  exportingId.value = ''
+  if (taskId) {
+    await taskStore.refreshTask(taskId)
+    beginPolling(taskId)
+  }
+}
+
+const beginPolling = (taskId) => {
+  if (pollHandle) clearInterval(pollHandle)
+  pollHandle = setInterval(async () => {
+    const task = await taskStore.refreshTask(taskId)
+    if (task && (task.status === 'Completed' || task.status === 'Failed')) {
+      clearInterval(pollHandle)
+      pollHandle = null
+    }
+  }, 1500)
+}
+
+onMounted(loadVms)
+
+onBeforeUnmount(() => {
+  if (pollHandle) clearInterval(pollHandle)
+})
+</script>
+
+<template>
+  <v-container class="py-10">
+    <v-row>
+      <v-col cols="12">
+        <v-card elevation="2">
+          <v-card-title class="d-flex align-center justify-space-between">
+            <div>
+              <div class="text-h6 font-weight-bold">VM 列表</div>
+              <div class="text-caption text-medium-emphasis">
+                Host: {{ authStore.host || '未登入' }}｜User: {{ authStore.username || '-' }}
+              </div>
+            </div>
+            <v-btn variant="text" color="primary" @click="loadVms" :loading="loading">重新整理</v-btn>
+          </v-card-title>
+          <v-divider />
+          <v-card-text>
+            <v-alert v-if="error" type="error" class="mb-4" density="comfortable">
+              {{ error }}
+            </v-alert>
+            
+            <v-text-field
+              v-model="search"
+              prepend-inner-icon="mdi-magnify"
+              label="搜尋 VM"
+              single-line
+              hide-details
+              density="compact"
+              class="mb-4"
+              variant="outlined"
+            ></v-text-field>
+
+            <v-data-table
+              :headers="headers"
+              :items="vms"
+              :search="search"
+              :loading="loading"
+              items-per-page="10"
+              class="elevation-1"
+            >
+              <template v-slot:item.actions="{ item }">
+                <v-btn size="small" color="primary" :loading="exportingId === item.id || taskStore.loading" @click="startExport(item.id)">
+                  匯出
+                </v-btn>
+              </template>
+              <template v-slot:no-data>
+                <div class="text-medium-emphasis text-center py-6">
+                  尚無資料
+                </div>
+              </template>
+            </v-data-table>
+
+            <div v-if="Object.keys(taskStore.tasks).length" class="mt-6">
+              <div class="text-subtitle-2 mb-2">任務狀態</div>
+              <v-table density="compact">
+                <thead>
+                  <tr>
+                    <th class="text-left">Task Id</th>
+                    <th class="text-left">VM</th>
+                    <th class="text-left">狀態</th>
+                    <th class="text-left">進度</th>
+                    <th class="text-left">下載連結</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="task in Object.values(taskStore.tasks)" :key="task.id">
+                    <td>{{ task.id }}</td>
+                    <td>{{ task.vmId }}</td>
+                    <td>{{ task.status }}</td>
+                    <td>{{ task.progress ?? '-' }}%</td>
+                    <td>
+                      <a v-if="task.downloadUrl" :href="task.downloadUrl" target="_blank">下載</a>
+                      <span v-else>-</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+  </v-container>
+</template>

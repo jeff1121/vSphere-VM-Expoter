@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  backend:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: vsphere-vm-exporter-backend:latest
+
+  frontend:
+    build:
+      context: ./frontend
+    image: vsphere-vm-exporter-frontend:latest

@@ -25,12 +25,12 @@ description: "Task list for vSphere VM Exporter implementation"
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create project structure (backend, frontend folders)
-- [ ] T002 Initialize .NET 8 Web API project in `backend/`
-- [ ] T003 Initialize Vue 3 + Vuetify project in `frontend/`
-- [ ] T004 [P] Create `docker-compose.yml` with Minio service
-- [ ] T005 [P] Configure backend linting/formatting (EditorConfig)
-- [ ] T006 [P] Configure frontend linting/formatting (ESLint/Prettier)
+- [x] T001 Create project structure (backend, frontend folders)
+- [x] T002 Initialize .NET 8 Web API project in `backend/`
+- [x] T003 Initialize Vue 3 + Vuetify project in `frontend/`
+- [x] T004 [P] Create `docker-compose.yml` with Minio service
+- [x] T005 [P] Configure backend linting/formatting (EditorConfig)
+- [x] T006 [P] Configure frontend linting/formatting (ESLint/Prettier)
 
 ---
 
@@ -40,12 +40,12 @@ description: "Task list for vSphere VM Exporter implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 [P] Setup Backend DI Container and Swagger
-- [ ] T008 [P] Setup Frontend Pinia Store and Axios Client
-- [ ] T009 [P] Create Backend Models (DTOs) for Login and VM Info
-- [ ] T010 [P] Create Frontend Types/Interfaces for VM and User
-- [ ] T011 Implement `MinioService` skeleton (Connect, Bucket Check)
-- [ ] T012 Implement `vSphereService` skeleton (Connect, Session Management)
+- [x] T007 [P] Setup Backend DI Container and Swagger
+- [x] T008 [P] Setup Frontend Pinia Store and Axios Client
+- [x] T009 [P] Create Backend Models (DTOs) for Login and VM Info
+- [x] T010 [P] Create Frontend Types/Interfaces for VM and User
+- [x] T011 Implement `MinioService` skeleton (Connect, Bucket Check)
+- [x] T012 Implement `vSphereService` skeleton (Connect, Session Management)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -59,13 +59,13 @@ description: "Task list for vSphere VM Exporter implementation"
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement Backend `POST /api/auth/login` (Connect to vCenter)
-- [ ] T014 [US1] Implement Backend `GET /api/vms` (List VMs from vCenter)
-- [ ] T015 [US1] Create Frontend Login View (`views/Login.vue`)
-- [ ] T016 [US1] Create Frontend VM List Component (`components/VmList.vue`)
-- [ ] T017 [US1] Integrate Frontend Auth Store with Login API
-- [ ] T018 [US1] Integrate Frontend VM List with VM API
-- [ ] T019 [US1] Add Error Handling for Login Failures (UI Feedback)
+- [x] T013 [US1] Implement Backend `POST /api/auth/login` (Connect to vCenter)
+- [x] T014 [US1] Implement Backend `GET /api/vms` (List VMs from vCenter)
+- [x] T015 [US1] Create Frontend Login View (`views/Login.vue`)
+- [x] T016 [US1] Create Frontend VM List Component (`components/VmList.vue`)
+- [x] T017 [US1] Integrate Frontend Auth Store with Login API
+- [x] T018 [US1] Integrate Frontend VM List with VM API
+- [x] T019 [US1] Add Error Handling for Login Failures (UI Feedback)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -79,12 +79,12 @@ description: "Task list for vSphere VM Exporter implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Implement Backend `POST /api/export/{vmId}` (Trigger Export)
-- [ ] T021 [US2] Implement `vSphereService.ExportVm` logic (OVF Manager/Export)
-- [ ] T022 [US2] Implement `MinioService.UploadStream` logic
-- [ ] T023 [US2] Create Backend Task Management (In-Memory Task State)
-- [ ] T024 [US2] Add "Export" Button to Frontend VM List
-- [ ] T025 [US2] Integrate Frontend with Export API
+- [x] T020 [US2] Implement Backend `POST /api/export/{vmId}` (Trigger Export)
+- [x] T021 [US2] Implement `vSphereService.ExportVm` logic (OVF Manager/Export)
+- [x] T022 [US2] Implement `MinioService.UploadStream` logic
+- [x] T023 [US2] Create Backend Task Management (In-Memory Task State)
+- [x] T024 [US2] Add "Export" Button to Frontend VM List
+- [x] T025 [US2] Integrate Frontend with Export API
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -98,10 +98,10 @@ description: "Task list for vSphere VM Exporter implementation"
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Implement Backend `GET /api/tasks/{taskId}` (Get Progress)
-- [ ] T027 [US4] Update Backend Export Logic to update Task Progress
-- [ ] T028 [US4] Create Frontend Progress Component (`components/ExportProgress.vue`)
-- [ ] T029 [US4] Implement Frontend Polling logic for Task Status
+- [x] T026 [US4] Implement Backend `GET /api/tasks/{taskId}` (Get Progress)
+- [x] T027 [US4] Update Backend Export Logic to update Task Progress
+- [x] T028 [US4] Create Frontend Progress Component (`components/ExportProgress.vue`)
+- [x] T029 [US4] Implement Frontend Polling logic for Task Status
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -115,9 +115,9 @@ description: "Task list for vSphere VM Exporter implementation"
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Implement Backend `MinioService.GetPresignedUrl`
-- [ ] T031 [US3] Update Backend Task Status to include Download URL upon completion
-- [ ] T032 [US3] Update Frontend to show Download Button when Task Complete
+- [x] T030 [US3] Implement Backend `MinioService.GetPresignedUrl`
+- [x] T031 [US3] Update Backend Task Status to include Download URL upon completion
+- [x] T032 [US3] Update Frontend to show Download Button when Task Complete
 
 ---
 
@@ -125,10 +125,23 @@ description: "Task list for vSphere VM Exporter implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T033 [P] Add Dockerfile for Backend
-- [ ] T034 [P] Add Dockerfile for Frontend
-- [ ] T035 [P] Update README.md with setup instructions
-- [ ] T036 [P] Perform End-to-End Testing (Manual)
+- [x] T033 [P] Add Dockerfile for Backend
+- [x] T034 [P] Add Dockerfile for Frontend
+- [x] T035 [P] Update README.md with setup instructions
+- [x] T036 [P] Perform End-to-End Testing (Manual)
+- [x] T037 [US2] Integrate OVF Tool for real VM export (Backend)
+
+---
+
+## Phase 8: Refinement & Polish (Post-MVP)
+
+**Purpose**: Enhancements for stability, deployment, and branding
+
+- [x] T038 [Infra] Split Docker Compose into Build and Runtime configurations
+- [x] T039 [Frontend] Implement Nginx configuration for SPA routing (Fix 404 on reload)
+- [x] T040 [Frontend] Implement Session Persistence (Pinia + LocalStorage)
+- [x] T041 [UI] Add Branding (Logo and Favicon support)
+- [x] T042 [Docs] Update Documentation (README, TASKS, PLAN)
 
 ---
 
@@ -146,4 +159,3 @@ description: "Task list for vSphere VM Exporter implementation"
 
 - Backend API before Frontend Integration
 - Core Logic before UI Components
-

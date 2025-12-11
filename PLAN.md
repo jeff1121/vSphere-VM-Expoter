@@ -57,7 +57,8 @@ vSphere-VM-Expoter/
 ### 階段 1: 後端核心開發 (Phase 1: Backend Core)
 1.  **vSphere 整合**:
     *   實作 `IVSphereService`。
-    *   功能: 登入驗證 (Login)、取得 VM 列表 (GetVMs)、匯出 VM (ExportVm)。
+    *   功能: 登入驗證 (Login)、取得 VM 列表 (GetVMs)。
+    *   **匯出實作**: 整合 VMware OVF Tool (CLI) 進行真實匯出 (ExportVm)。
     *   *注意: 需處理 vSphere 8 相容性。*
 2.  **Minio 整合**:
     *   實作 `IMinioService`。
@@ -83,6 +84,12 @@ vSphere-VM-Expoter/
 1.  **端對端測試**: 模擬完整流程 (登入 -> 列表 -> 匯出 -> 下載)。
 2.  **錯誤處理**: 測試 vCenter 連線失敗、Minio 斷線等情境。
 3.  **UI 優化**: 確保 Vuetify 元件在不同解析度下顯示正常。
+
+### 階段 4: 優化與部署準備 (Phase 4: Refinement & Deployment)
+1.  **基礎設施重構**: 將 `docker-compose` 拆分為建置 (Build) 與執行 (Runtime) 設定，優化生產環境部署。
+2.  **前端路由修復**: 引入 Nginx 處理 SPA 路由 (History Mode)，解決重新整理 404 問題。
+3.  **狀態持久化**: 實作 Pinia LocalStorage 持久化，防止重新整理後登入狀態遺失。
+4.  **品牌識別**: 加入 Logo 與 Favicon 支援。
 
 ## 規範檢查 (Constitution Check)
 
