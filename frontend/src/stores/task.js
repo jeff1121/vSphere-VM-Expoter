@@ -8,12 +8,12 @@ export const useTaskStore = defineStore('tasks', {
     loading: false,
   }),
   actions: {
-    async startExport(sessionId, vmId) {
+    async startExport(sessionId, vmId, vmName) {
       this.loading = true
       this.error = ''
       try {
-        const { taskId } = await triggerExport(sessionId, vmId)
-        this.tasks[taskId] = { id: taskId, vmId, status: 'Running', progress: 10 }
+        const { taskId } = await triggerExport(sessionId, vmId, vmName)
+        this.tasks[taskId] = { id: taskId, vmId, vmName, status: 'Running', progress: 10 }
         return taskId
       } catch (err) {
         this.error = err?.response?.data || '匯出啟動失敗'

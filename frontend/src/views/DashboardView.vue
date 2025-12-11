@@ -3,7 +3,7 @@ import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useTaskStore } from '../stores/task'
-import { fetchVms } from '../services/vmService'
+import { fetchVms, powerOffVm } from '../services/vmService'
 
 const authStore = useAuthStore()
 const taskStore = useTaskStore()
@@ -13,6 +13,9 @@ const loading = ref(false)
 const vms = ref([])
 const error = ref('')
 const exportingId = ref('')
+const poweringOffId = ref('')
+const actionError = ref('')
+const actionMessage = ref('')
 const search = ref('')
 let pollHandle = null
 
@@ -32,6 +35,7 @@ const loadVms = async () => {
 
   loading.value = true
   error.value = ''
+  actionError.value = ''
   try {
     vms.value = await fetchVms(authStore.sessionId)
   } catch (err) {
@@ -41,10 +45,15 @@ const loadVms = async () => {
   }
 }
 
-const startExport = async (vmId) => {
+const isPoweredOn = (state) => {
+  const s = (state || '').toString().toUpperCase()
+  return s === 'POWERED_ON' || s === 'POWEREDON'
+}
+
+const startExport = async (vm) => {
   if (!authStore.sessionId) return
-  exportingId.value = vmId
-  const taskId = await taskStore.startExport(authStore.sessionId, vmId)
+  exportingId.value = vm.id
+  const taskId = await taskStore.startExport(authStore.sessionId, vm.id, vm.name)
   exportingId.value = ''
   if (taskId) {
     await taskStore.refreshTask(taskId)
@@ -61,6 +70,22 @@ const beginPolling = (taskId) => {
       pollHandle = null
     }
   }, 1500)
+}
+
+const powerOff = async (vmId) => {
+  if (!authStore.sessionId) return
+  poweringOffId.value = vmId
+  actionError.value = ''
+  actionMessage.value = ''
+  try {
+    const result = await powerOffVm(authStore.sessionId, vmId)
+    actionMessage.value = result?.message || '已送出關機指令'
+    setTimeout(loadVms, 1500)
+  } catch (err) {
+    actionError.value = err?.response?.data || '關機失敗'
+  } finally {
+    poweringOffId.value = ''
+  }
 }
 
 onMounted(loadVms)
@@ -89,6 +114,12 @@ onBeforeUnmount(() => {
             <v-alert v-if="error" type="error" class="mb-4" density="comfortable">
               {{ error }}
             </v-alert>
+            <v-alert v-if="actionError" type="error" class="mb-4" density="comfortable">
+              {{ actionError }}
+            </v-alert>
+            <v-alert v-if="actionMessage" type="success" class="mb-4" density="comfortable">
+              {{ actionMessage }}
+            </v-alert>
             
             <v-text-field
               v-model="search"
@@ -110,9 +141,21 @@ onBeforeUnmount(() => {
               class="elevation-1"
             >
               <template v-slot:item.actions="{ item }">
-                <v-btn size="small" color="primary" :loading="exportingId === item.id || taskStore.loading" @click="startExport(item.id)">
-                  匯出
-                </v-btn>
+                <div class="d-flex ga-2 flex-wrap">
+                  <v-btn size="small" color="primary" :loading="exportingId === item.id || taskStore.loading" @click="startExport(item)">
+                    匯出
+                  </v-btn>
+                  <v-btn
+                    size="small"
+                    color="error"
+                    variant="tonal"
+                    :disabled="!isPoweredOn(item.powerState)"
+                    :loading="poweringOffId === item.id"
+                    @click="powerOff(item.id)"
+                  >
+                    關機
+                  </v-btn>
+                </div>
               </template>
               <template v-slot:no-data>
                 <div class="text-medium-emphasis text-center py-6">
@@ -130,6 +173,7 @@ onBeforeUnmount(() => {
                     <th class="text-left">VM</th>
                     <th class="text-left">狀態</th>
                     <th class="text-left">進度</th>
+                    <th class="text-left">錯誤</th>
                     <th class="text-left">下載連結</th>
                   </tr>
                 </thead>
@@ -139,6 +183,10 @@ onBeforeUnmount(() => {
                     <td>{{ task.vmId }}</td>
                     <td>{{ task.status }}</td>
                     <td>{{ task.progress ?? '-' }}%</td>
+                    <td class="text-error" style="max-width: 240px; white-space: normal;">
+                      <span v-if="task.error">{{ task.error }}</span>
+                      <span v-else>-</span>
+                    </td>
                     <td>
                       <a v-if="task.downloadUrl" :href="task.downloadUrl" target="_blank">下載</a>
                       <span v-else>-</span>

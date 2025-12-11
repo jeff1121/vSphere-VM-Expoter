@@ -22,8 +22,13 @@ public class VSphereServiceStub : IVSphereService
         return Task.FromResult<IReadOnlyCollection<VmInfo>>(sample);
     }
 
-    public Task<Guid> ExportVmAsync(string sessionId, string vmId, CancellationToken cancellationToken)
+    public Task<Guid> ExportVmAsync(string sessionId, string vmId, string vmName, CancellationToken cancellationToken)
     {
         return Task.FromResult(Guid.NewGuid());
+    }
+
+    public Task PowerOffAsync(string sessionId, string vmId, CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
     }
 }

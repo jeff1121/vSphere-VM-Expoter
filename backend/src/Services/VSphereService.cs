@@ -105,7 +105,7 @@ public class VSphereService : IVSphereService
         return vms;
     }
 
-    public async Task<Guid> ExportVmAsync(string sessionId, string vmId, CancellationToken cancellationToken)
+    public async Task<Guid> ExportVmAsync(string sessionId, string vmId, string vmName, CancellationToken cancellationToken)
     {
         var session = _sessionStore.Get(sessionId) ?? throw new UnauthorizedAccessException("Invalid Session");
         
@@ -117,13 +117,14 @@ public class VSphereService : IVSphereService
         {
             try 
             {
-                await PerformExport(session, vmId, task);
+                await PerformExport(session, vmId, vmName, task);
             }
             catch (Exception ex)
             {
                 task.Status = ExportTaskStatus.Failed;
-                // Log error
-                Console.WriteLine($"Export failed: {ex}");
+                task.Error = ex.Message;
+                task.DownloadUrl = null;
+                Console.WriteLine($"[Export Error] Task {task.Id} for VM {vmId} failed: {ex}");
                 _taskStore.Update(task);
             }
         });
@@ -131,7 +132,7 @@ public class VSphereService : IVSphereService
         return task.Id;
     }
 
-    private async Task PerformExport(SessionData session, string vmId, ExportTask task)
+    private async Task PerformExport(SessionData session, string vmId, string vmName, ExportTask task)
     {
         task.Status = ExportTaskStatus.Running;
         task.Progress = 0;
@@ -139,7 +140,14 @@ public class VSphereService : IVSphereService
 
         var tempDir = Path.Combine(Path.GetTempPath(), "exports", task.Id.ToString());
         Directory.CreateDirectory(tempDir);
-        var ovaPath = Path.Combine(tempDir, $"{vmId}.ova");
+        
+        // Use vmName for the file name if provided, otherwise fallback to vmId
+        var fileName = string.IsNullOrWhiteSpace(vmName) ? vmId : vmName;
+        // Sanitize filename to remove invalid characters
+        fileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));
+        
+        var ovaPath = Path.Combine(tempDir, $"{fileName}.ova");
+        var success = false;
 
         try
         {
@@ -149,7 +157,7 @@ public class VSphereService : IVSphereService
             var passEncoded = System.Net.WebUtility.UrlEncode(session.Password);
             
             // Log debug info (mask password)
-            Console.WriteLine($"[Export Debug] VM ID: {vmId}");
+            Console.WriteLine($"[Export Debug] VM ID: {vmId}, Name: {vmName}");
             
             // Try adding type prefix for OVF Tool
             var moref = vmId.StartsWith("vim.VirtualMachine:") ? vmId : $"vim.VirtualMachine:{vmId}";
@@ -160,7 +168,7 @@ public class VSphereService : IVSphereService
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "ovftool",
-                Arguments = $"--acceptAllEulas --noSSLVerify --diskMode=thin \"{source}\" \"{ovaPath}\"",
+                Arguments = $"--acceptAllEulas --noSSLVerify --diskMode=thin --X:vimSessionTimeout=1 --X:connectionReconnectCount=3 \"{source}\" \"{ovaPath}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -208,7 +216,7 @@ public class VSphereService : IVSphereService
             var bucketName = "exports";
             await _minioService.EnsureBucketExistsAsync(bucketName, CancellationToken.None);
             
-            var objectName = $"{vmId}.ova";
+            var objectName = $"{fileName}.ova";
             using var stream = File.OpenRead(ovaPath);
             
             await _minioService.UploadAsync(bucketName, objectName, stream, CancellationToken.None);
@@ -217,13 +225,54 @@ public class VSphereService : IVSphereService
             task.Status = ExportTaskStatus.Completed;
             task.DownloadUrl = await _minioService.GetPresignedUrlAsync(bucketName, objectName, TimeSpan.FromHours(1));
             _taskStore.Update(task);
+            success = true;
+        }
+        catch (Exception ex)
+        {
+            task.Status = ExportTaskStatus.Failed;
+            task.Error = ex.Message;
+            task.DownloadUrl = null;
+            _taskStore.Update(task);
+            Console.WriteLine($"[Export Error] Task {task.Id} for VM {vmId} failed: {ex}");
+            return;
         }
         finally
         {
-            if (Directory.Exists(tempDir))
+            if (success && Directory.Exists(tempDir))
             {
                 Directory.Delete(tempDir, true);
             }
+            else if (!success)
+            {
+                Console.WriteLine($"[Export Debug] Temporary export data kept at: {tempDir}");
+            }
         }
+    }
+
+    public async Task PowerOffAsync(string sessionId, string vmId, CancellationToken cancellationToken)
+    {
+        var session = _sessionStore.Get(sessionId) ?? throw new UnauthorizedAccessException("Invalid Session");
+        using var client = CreateClient(session.Host, session.Token);
+
+        var response = await client.PostAsync($"api/vcenter/vm/{vmId}/power/stop", null, cancellationToken);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        var message = $"vSphere power-off failed (status {(int)response.StatusCode}): {body}";
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            message = "無法關機：VM 目前非執行中或狀態不允許";
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            message = "權限不足，請確認 vSphere 帳號具備關機權限";
+        }
+
+        throw new InvalidOperationException(message);
     }
 }

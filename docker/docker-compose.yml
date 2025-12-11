@@ -21,8 +21,8 @@ services:
     restart: unless-stopped
 
   backend:
-    image: vsphere-vm-exporter-backend:latest
-    platform: linux/amd64
+    image: vm-exporter/vsphere-vm-exporter-backend:${APP_VERSION:-8.2.1}-${ARCH:-amd64}
+    platform: linux/${ARCH:-amd64}
     container_name: vsphere-backend
     depends_on:
       - minio
@@ -43,7 +43,7 @@ services:
       retries: 3
 
   frontend:
-    image: vsphere-vm-exporter-frontend:latest
+    image: vm-exporter/vsphere-vm-exporter-frontend:${APP_VERSION:-8.2.1}-${ARCH:-amd64}
     container_name: vsphere-frontend
     depends_on:
       - backend

@@ -6,3 +6,14 @@ export const fetchVms = async (sessionId) => {
   })
   return response.data
 }
+
+export const powerOffVm = async (sessionId, vmId) => {
+  const response = await apiClient.post(
+    `/api/vms/${vmId}/power/off`,
+    {},
+    {
+      headers: { 'X-Session-Id': sessionId },
+    }
+  )
+  return response.data
+}

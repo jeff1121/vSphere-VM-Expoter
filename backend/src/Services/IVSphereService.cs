@@ -6,5 +6,6 @@ public interface IVSphereService
 {
     Task<string> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<VmInfo>> GetVmsAsync(string sessionId, CancellationToken cancellationToken);
-    Task<Guid> ExportVmAsync(string sessionId, string vmId, CancellationToken cancellationToken);
+    Task<Guid> ExportVmAsync(string sessionId, string vmId, string vmName, CancellationToken cancellationToken);
+    Task PowerOffAsync(string sessionId, string vmId, CancellationToken cancellationToken);
 }

@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  backend:
+    platform: linux/${ARCH:-amd64}
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    image: vm-exporter/vsphere-vm-exporter-backend:${APP_VERSION:-8.2.1}-${ARCH:-amd64}
+
+  backend-arm64:
+    platform: linux/arm64
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    image: vm-exporter/vsphere-vm-exporter-backend:${APP_VERSION:-8.2.1}-arm64  
+
+  frontend:
+    platform: linux/${ARCH:-amd64}
+    build:
+      context: ../frontend
+    image: vm-exporter/vsphere-vm-exporter-frontend:${APP_VERSION:-8.2.1}-${ARCH:-amd64}
+
+  frontend-arm64:
+    platform: linux/arm64
+    build:
+      context: ../frontend
+    image: vm-exporter/vsphere-vm-exporter-frontend:${APP_VERSION:-8.2.1}-arm64

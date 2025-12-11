@@ -17,7 +17,7 @@ public class ExportController : ControllerBase
     }
 
     [HttpPost("{vmId}")]
-    public async Task<IActionResult> ExportVm(string vmId, [FromHeader(Name = "X-Session-Id")] string sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> ExportVm(string vmId, [FromQuery] string? vmName, [FromHeader(Name = "X-Session-Id")] string sessionId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
@@ -26,7 +26,7 @@ public class ExportController : ControllerBase
 
         try
         {
-            var taskId = await _vsphereService.ExportVmAsync(sessionId, vmId, cancellationToken);
+            var taskId = await _vsphereService.ExportVmAsync(sessionId, vmId, vmName ?? "", cancellationToken);
             return Accepted(new { taskId });
         }
         catch (UnauthorizedAccessException)
