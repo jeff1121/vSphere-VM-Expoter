@@ -1,7 +1,9 @@
 #!/bin/bash
 
-appVersion="8.2.1"
+appVersion="8.2.6"
 acrBase="logicalis.azurecr.io/vm-exporter"
+
+docker compose -f docker-compose.build.yml --build-arg APP_VERSION=${APP_VERSION} build
 
 # Tagging Docker images for AMD64 architecture
 docker tag vm-exporter/vsphere-vm-exporter-backend:${appVersion}-amd64 ${acrBase}/vsphere-vm-exporter-backend:latest-amd64
@@ -36,4 +38,3 @@ echo "----------------------------------------"
 echo "Docker images pushed successfully."
 
 echo "----------------------------------------"
-

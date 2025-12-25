@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: vm-exporter/vsphere-vm-exporter-backend:${APP_VERSION:-8.2.1}-${ARCH:-amd64}
+    image: vm-exporter/vsphere-vm-exporter-backend:${APP_VERSION:-8.2.6}-${ARCH:-amd64}
     platform: linux/${ARCH:-amd64}
     container_name: vsphere-backend
     depends_on:
@@ -43,12 +43,12 @@ services:
       retries: 3
 
   frontend:
-    image: vm-exporter/vsphere-vm-exporter-frontend:${APP_VERSION:-8.2.1}-${ARCH:-amd64}
+    image: vm-exporter/vsphere-vm-exporter-frontend:${APP_VERSION:-8.2.6}-${ARCH:-amd64}
     container_name: vsphere-frontend
     depends_on:
       - backend
     environment:
-      - VITE_API_BASE_URL=http://localhost:8080
+      - VITE_API_BASE_URL=http://10.36.225.8:8080
     ports:
       - "4173:80"
     healthcheck:

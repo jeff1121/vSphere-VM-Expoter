@@ -13,7 +13,7 @@ export const useTaskStore = defineStore('tasks', {
       this.error = ''
       try {
         const { taskId } = await triggerExport(sessionId, vmId, vmName)
-        this.tasks[taskId] = { id: taskId, vmId, vmName, status: 'Running', progress: 10 }
+        this.tasks[taskId] = { id: taskId, vmId, vmName, status: 'Running', progress: 0 }
         return taskId
       } catch (err) {
         this.error = err?.response?.data || '匯出啟動失敗'
@@ -22,9 +22,9 @@ export const useTaskStore = defineStore('tasks', {
         this.loading = false
       }
     },
-    async refreshTask(taskId) {
+    async refreshTask(sessionId, taskId) {
       try {
-        const result = await fetchTaskStatus(taskId)
+        const result = await fetchTaskStatus(sessionId, taskId)
         this.tasks[taskId] = result
         return result
       } catch (err) {

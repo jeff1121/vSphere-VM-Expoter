@@ -1,8 +1,3 @@
-<script setup>
-import { useLocalSession } from './composables/useLocalSession'
-useLocalSession()
-</script>
-
 <template>
   <v-app>
     <v-app-bar color="primary" density="comfortable" flat>

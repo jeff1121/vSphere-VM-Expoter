@@ -1,5 +1,7 @@
 # 專案開發原則 (Project Constitution)
 
+**版本**: 8.2.6
+
 本文件定義 vSphere-VM-Expoter 專案的核心開發原則。我們採用 **MVP (最小可行性產品)** 策略，避免過度設計，專注於提供核心價值。
 
 ## 1. 程式碼品質 (Code Quality)

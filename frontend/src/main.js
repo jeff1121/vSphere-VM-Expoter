@@ -7,7 +7,6 @@ import 'vuetify/styles'
 import './style.css'
 import App from './App.vue'
 import router from './router'
-import { useLocalSession } from './composables/useLocalSession'
 
 const vuetify = createVuetify({
   components,
@@ -17,8 +16,5 @@ const vuetify = createVuetify({
 const pinia = createPinia()
 
 const app = createApp(App).use(pinia).use(router).use(vuetify)
-
-// Restore persisted session before mounting
-useLocalSession()
 
 app.mount('#app')

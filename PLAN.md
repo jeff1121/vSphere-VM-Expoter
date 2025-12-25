@@ -1,6 +1,6 @@
 # 實作計畫 (Implementation Plan): vSphere VM Exporter
 
-**分支**: `main` | **日期**: 2025-12-10 | **規格**: [SPECIFICATION.md](SPECIFICATION.md)
+**分支**: `main` | **日期**: 2025-12-10 | **規格**: [SPECIFICATION.md](SPECIFICATION.md) | **版本**: 8.2.6
 **輸入**: 基於 SPECIFICATION.md 的功能需求與使用者技術選型。
 
 ## 摘要

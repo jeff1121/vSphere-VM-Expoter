@@ -50,24 +50,70 @@ const isPoweredOn = (state) => {
   return s === 'POWERED_ON' || s === 'POWEREDON'
 }
 
+const statusLabels = {
+  0: 'Pending',
+  1: 'Running',
+  2: 'Completed',
+  3: 'Failed',
+}
+
+const formatTaskStatus = (status) => {
+  if (typeof status === 'number') {
+    return statusLabels[status] ?? status
+  }
+  return status || '-'
+}
+
+const isTerminalStatus = (status) => {
+  if (typeof status === 'number') {
+    return status === 2 || status === 3
+  }
+  return status === 'Completed' || status === 'Failed'
+}
+
 const startExport = async (vm) => {
   if (!authStore.sessionId) return
   exportingId.value = vm.id
   const taskId = await taskStore.startExport(authStore.sessionId, vm.id, vm.name)
   exportingId.value = ''
   if (taskId) {
-    await taskStore.refreshTask(taskId)
-    beginPolling(taskId)
+    await taskStore.refreshTask(authStore.sessionId, taskId)
+    beginPolling()
   }
 }
 
-const beginPolling = (taskId) => {
-  if (pollHandle) clearInterval(pollHandle)
+const stopPolling = () => {
+  if (!pollHandle) return
+  clearInterval(pollHandle)
+  pollHandle = null
+}
+
+const refreshActiveTasks = async () => {
+  const activeTaskIds = Object.values(taskStore.tasks)
+    .filter((task) => !isTerminalStatus(task.status))
+    .map((task) => task.id)
+    .filter(Boolean)
+
+  if (!activeTaskIds.length) {
+    return false
+  }
+
+  await Promise.all(
+    activeTaskIds.map((taskId) => taskStore.refreshTask(authStore.sessionId, taskId))
+  )
+  return true
+}
+
+const beginPolling = () => {
+  if (pollHandle) return
   pollHandle = setInterval(async () => {
-    const task = await taskStore.refreshTask(taskId)
-    if (task && (task.status === 'Completed' || task.status === 'Failed')) {
-      clearInterval(pollHandle)
-      pollHandle = null
+    if (!authStore.sessionId) {
+      stopPolling()
+      return
+    }
+    const hasActive = await refreshActiveTasks()
+    if (!hasActive) {
+      stopPolling()
     }
   }, 1500)
 }
@@ -88,10 +134,15 @@ const powerOff = async (vmId) => {
   }
 }
 
-onMounted(loadVms)
+onMounted(async () => {
+  await loadVms()
+  if (authStore.sessionId && Object.keys(taskStore.tasks).length) {
+    beginPolling()
+  }
+})
 
 onBeforeUnmount(() => {
-  if (pollHandle) clearInterval(pollHandle)
+  stopPolling()
 })
 </script>
 
@@ -181,7 +232,7 @@ onBeforeUnmount(() => {
                   <tr v-for="task in Object.values(taskStore.tasks)" :key="task.id">
                     <td>{{ task.id }}</td>
                     <td>{{ task.vmId }}</td>
-                    <td>{{ task.status }}</td>
+                    <td>{{ formatTaskStatus(task.status) }}</td>
                     <td>{{ task.progress ?? '-' }}%</td>
                     <td class="text-error" style="max-width: 240px; white-space: normal;">
                       <span v-if="task.error">{{ task.error }}</span>

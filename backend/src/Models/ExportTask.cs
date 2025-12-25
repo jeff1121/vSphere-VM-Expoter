@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Backend.Models;
 
 public enum ExportTaskStatus
@@ -12,6 +14,8 @@ public class ExportTask
 {
     public Guid Id { get; set; }
     public string VmId { get; set; } = string.Empty;
+    [JsonIgnore]
+    public string SessionId { get; set; } = string.Empty;
     public ExportTaskStatus Status { get; set; } = ExportTaskStatus.Pending;
     public int Progress { get; set; }
     public string? DownloadUrl { get; set; }

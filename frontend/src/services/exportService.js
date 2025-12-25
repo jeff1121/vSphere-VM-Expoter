@@ -12,7 +12,9 @@ export const triggerExport = async (sessionId, vmId, vmName) => {
   return response.data
 }
 
-export const fetchTaskStatus = async (taskId) => {
-  const response = await apiClient.get(`/api/tasks/${taskId}`)
+export const fetchTaskStatus = async (sessionId, taskId) => {
+  const response = await apiClient.get(`/api/tasks/${taskId}`, {
+    headers: { 'X-Session-Id': sessionId },
+  })
   return response.data
 }

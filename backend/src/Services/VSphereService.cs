@@ -37,8 +37,56 @@ public class VSphereService : IVSphereService
         return client;
     }
 
+    private static string ExtractSessionToken(HttpResponseMessage response, string body)
+    {
+        if (response.Headers.TryGetValues("vmware-api-session-id", out var headerValues))
+        {
+            foreach (var value in headerValues)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value.Trim();
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = body.Trim();
+        try
+        {
+            using var doc = JsonDocument.Parse(trimmed);
+            var root = doc.RootElement;
+
+            if (root.ValueKind == JsonValueKind.String)
+            {
+                return root.GetString() ?? string.Empty;
+            }
+
+            if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("value", out var valueElement))
+            {
+                if (valueElement.ValueKind == JsonValueKind.String)
+                {
+                    return valueElement.GetString() ?? string.Empty;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Fallback to raw body parsing below.
+        }
+
+        return trimmed.Trim('"');
+    }
+
     public async Task<string> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
+        // Sanitize host input
+        request.Host = request.Host.Replace("https://", "").Replace("http://", "").TrimEnd('/');
+
         using var client = CreateClient(request.Host);
         var auth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{request.Username}:{request.Password}"));
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", auth);
@@ -58,8 +106,12 @@ public class VSphereService : IVSphereService
         
         response.EnsureSuccessStatusCode();
 
-        var token = await response.Content.ReadAsStringAsync(cancellationToken);
-        token = token.Trim('"'); // Remove quotes if json string
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        var token = ExtractSessionToken(response, body);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new InvalidOperationException("無法取得 vSphere session token");
+        }
 
         var sessionId = Guid.NewGuid().ToString();
         _sessionStore.Add(sessionId, new SessionData(request.Host, token, request.Username, request.Password));
@@ -110,7 +162,7 @@ public class VSphereService : IVSphereService
         var session = _sessionStore.Get(sessionId) ?? throw new UnauthorizedAccessException("Invalid Session");
         
         // Create a task to track progress
-        var task = _taskStore.Create(vmId);
+        var task = _taskStore.Create(sessionId, vmId);
         
         // Run export in background
         _ = Task.Run(async () => 
@@ -168,7 +220,7 @@ public class VSphereService : IVSphereService
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "ovftool",
-                Arguments = $"--acceptAllEulas --noSSLVerify --diskMode=thin --X:vimSessionTimeout=1 --X:connectionReconnectCount=3 \"{source}\" \"{ovaPath}\"",
+                Arguments = $"--acceptAllEulas --noSSLVerify --diskMode=thin --powerOffSource --X:vimSessionTimeout=1 --X:connectionReconnectCount=3 \"{source}\" \"{ovaPath}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,

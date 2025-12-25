@@ -7,14 +7,15 @@ public class InMemoryExportTaskStore : IExportTaskStore
     private readonly Dictionary<Guid, ExportTask> _tasks = new();
     private readonly object _lock = new();
 
-    public ExportTask Create(string vmId)
+    public ExportTask Create(string sessionId, string vmId)
     {
         var task = new ExportTask
         {
             Id = Guid.NewGuid(),
             VmId = vmId,
+            SessionId = sessionId,
             Status = ExportTaskStatus.Running,
-            Progress = 10,
+            Progress = 0,
         };
 
         lock (_lock)

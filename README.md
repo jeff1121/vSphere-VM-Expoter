@@ -1,11 +1,13 @@
 # vSphere VM Exporter
 
+**版本**: 8.2.6
+
 這是一個 Web 應用程式，旨在協助使用者從 VMware vSphere 匯出虛擬機 (VM) 為 OVA 格式，並將其儲存至 Minio Object Storage。
 
 ## 功能特色
 
 *   **vSphere 整合**: 支援 vSphere 8+，可登入並列出 VM。
-*   **一鍵匯出**: 選擇 VM 後自動匯出為 OVA。
+*   **一鍵匯出**: 選擇 VM 後自動匯出為 OVA (若 VM 為開機狀態，將自動執行關機)。
 *   **Minio 儲存**: 匯出的檔案自動上傳至 Minio S3 相容儲存。
 *   **即時進度**: 網頁介面顯示匯出與上傳進度。
 *   **下載連結**: 完成後提供直接下載連結。
