@@ -4,7 +4,7 @@ description: "Task list for vSphere VM Exporter implementation"
 
 # Tasks: vSphere VM Exporter
 
-**版本**: 8.2.6
+**版本**: 8.3.0
 **Input**: Design documents from `SPECIFICATION.md` and `PLAN.md`
 **Prerequisites**: `PLAN.md` (required), `SPECIFICATION.md` (required for user stories)
 

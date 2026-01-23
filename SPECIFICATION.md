@@ -1,7 +1,7 @@
 # 功能規格書: vSphere VM Exporter Web App
 
 **功能分支**: `feature/vm-exporter-webapp`
-**版本**: 8.2.6
+**版本**: 8.3.0
 **建立日期**: 2025-12-10
 **狀態**: 草稿
 **輸入**: 使用者需求描述: "建立一個 Web APP 可以協助使用者 從 vmware vsphere export 目標虛擬機出來成 {vm-name}.ova"

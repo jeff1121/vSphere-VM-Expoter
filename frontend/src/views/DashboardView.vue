@@ -147,18 +147,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <v-container class="py-10">
+  <v-container class="page-shell">
     <v-row>
       <v-col cols="12">
-        <v-card elevation="2">
-          <v-card-title class="d-flex align-center justify-space-between">
+        <v-card elevation="0" class="glass-card dashboard-card">
+          <v-card-title class="card-header d-flex align-center justify-space-between flex-wrap">
             <div>
               <div class="text-h6 font-weight-bold">VM 列表</div>
               <div class="text-caption text-medium-emphasis">
                 Host: {{ authStore.host || '未登入' }}｜User: {{ authStore.username || '-' }}
               </div>
             </div>
-            <v-btn variant="text" color="primary" @click="loadVms" :loading="loading">重新整理</v-btn>
+            <v-btn class="btn-ghost" variant="tonal" color="primary" @click="loadVms" :loading="loading">重新整理</v-btn>
           </v-card-title>
           <v-divider />
           <v-card-text>
@@ -174,12 +174,11 @@ onBeforeUnmount(() => {
             
             <v-text-field
               v-model="search"
-              prepend-inner-icon="mdi-magnify"
               label="搜尋 VM"
               single-line
               hide-details
               density="compact"
-              class="mb-4"
+              class="mb-4 glass-input"
               variant="outlined"
             ></v-text-field>
 
@@ -189,16 +188,16 @@ onBeforeUnmount(() => {
               :search="search"
               :loading="loading"
               items-per-page="10"
-              class="elevation-1"
+              class="glass-table"
             >
-              <template v-slot:item.actions="{ item }">
+              <template v-slot:[`item.actions`]="{ item }">
                 <div class="d-flex ga-2 flex-wrap">
-                  <v-btn size="small" color="primary" :loading="exportingId === item.id || taskStore.loading" @click="startExport(item)">
+                  <v-btn size="small" class="btn-primary" :loading="exportingId === item.id || taskStore.loading" @click="startExport(item)">
                     匯出
                   </v-btn>
                   <v-btn
                     size="small"
-                    color="error"
+                    class="btn-danger"
                     variant="tonal"
                     :disabled="!isPoweredOn(item.powerState)"
                     :loading="poweringOffId === item.id"
@@ -217,7 +216,7 @@ onBeforeUnmount(() => {
 
             <div v-if="Object.keys(taskStore.tasks).length" class="mt-6">
               <div class="text-subtitle-2 mb-2">任務狀態</div>
-              <v-table density="compact">
+              <v-table density="compact" class="glass-table task-table">
                 <thead>
                   <tr>
                     <th class="text-left">Task Id</th>
@@ -239,7 +238,16 @@ onBeforeUnmount(() => {
                       <span v-else>-</span>
                     </td>
                     <td>
-                      <a v-if="task.downloadUrl" :href="task.downloadUrl" target="_blank">下載</a>
+                      <v-btn
+                        v-if="task.downloadUrl"
+                        :href="task.downloadUrl"
+                        target="_blank"
+                        size="small"
+                        class="btn-ghost"
+                        variant="tonal"
+                      >
+                        下載
+                      </v-btn>
                       <span v-else>-</span>
                     </td>
                   </tr>

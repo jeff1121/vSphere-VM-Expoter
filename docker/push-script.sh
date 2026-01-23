@@ -1,6 +1,6 @@
 #!/bin/bash
 
-appVersion="8.2.6"
+appVersion="8.3.0"
 acrBase="logicalis.azurecr.io/vm-exporter"
 
 docker compose -f docker-compose.build.yml --build-arg APP_VERSION=${APP_VERSION} build
