@@ -1,0 +1,49 @@
+name: 前端 CI（Lint、測試、覆蓋率）
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/ci-frontend.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/ci-frontend.yml"
+
+jobs:
+  lint-and-test:
+    name: Lint 與單元測試
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: 簽出程式碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安裝相依套件
+        run: npm ci
+
+      - name: 執行 ESLint 程式碼風格檢查
+        run: npm run lint
+
+      - name: 執行單元測試並產生覆蓋率報告
+        run: npm run test:coverage
+
+      - name: 上傳覆蓋率報告
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          if-no-files-found: warn

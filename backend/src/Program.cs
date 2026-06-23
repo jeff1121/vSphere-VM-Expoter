@@ -13,11 +13,21 @@ builder.Services.AddScoped<IVSphereService, VSphereService>();
 builder.Services.AddScoped<IMinioService, MinioService>();
 builder.Services.AddSingleton<IExportTaskStore, InMemoryExportTaskStore>();
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+        }
+        else
+        {
+            // Development fallback: allow all origins only when no origins are configured
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        }
     });
 });
 
@@ -31,3 +41,6 @@ app.UseCors();
 app.MapControllers();
 
 app.Run();
+
+// Expose Program as partial class for test host (WebApplicationFactory)
+public partial class Program { }

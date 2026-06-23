@@ -1,0 +1,54 @@
+name: 後端 CI（建置、測試、覆蓋率）
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci-backend.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/ci-backend.yml"
+
+jobs:
+  build-and-test:
+    name: 建置並執行後端測試
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 簽出程式碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: 還原 NuGet 套件
+        run: dotnet restore backend/src/Backend.csproj
+
+      - name: 建置主專案
+        run: dotnet build backend/src/Backend.csproj --no-restore --configuration Release
+
+      - name: 還原測試套件
+        run: dotnet restore backend/tests/Backend.Tests/Backend.Tests.csproj
+
+      - name: 執行單元測試並產生覆蓋率報告
+        run: |
+          dotnet test backend/tests/Backend.Tests/Backend.Tests.csproj \
+            --no-restore \
+            --configuration Debug \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=lcov \
+            /p:CoverletOutput=./coverage/lcov.info
+
+      - name: 上傳覆蓋率報告
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage/
+          if-no-files-found: warn
