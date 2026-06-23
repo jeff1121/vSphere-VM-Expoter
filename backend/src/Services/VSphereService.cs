@@ -13,21 +13,25 @@ public class VSphereService : IVSphereService
     private readonly ISessionStore _sessionStore;
     private readonly IExportTaskStore _taskStore;
     private readonly IMinioService _minioService;
+    private readonly IConfiguration _configuration;
 
-    public VSphereService(IHttpClientFactory httpClientFactory, ISessionStore sessionStore, IExportTaskStore taskStore, IMinioService minioService)
+    public VSphereService(IHttpClientFactory httpClientFactory, ISessionStore sessionStore, IExportTaskStore taskStore, IMinioService minioService, IConfiguration configuration)
     {
         _httpClientFactory = httpClientFactory;
         _sessionStore = sessionStore;
         _taskStore = taskStore;
         _minioService = minioService;
+        _configuration = configuration;
     }
 
     private HttpClient CreateClient(string host, string? token = null)
     {
-        var handler = new HttpClientHandler
+        var skipSsl = _configuration.GetValue<bool>("VSphere:SkipSslVerification", false);
+        var handler = new HttpClientHandler();
+        if (skipSsl)
         {
-            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-        };
+            handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+        }
         var client = new HttpClient(handler);
         client.BaseAddress = new Uri($"https://{host}/");
         if (token != null)
@@ -93,17 +97,17 @@ public class VSphereService : IVSphereService
 
         // Try vSphere 7+ REST API
         var response = await client.PostAsync("api/session", null, cancellationToken);
-        
+
         // Fallback for older versions if needed, but spec says vSphere 8+
         if (!response.IsSuccessStatusCode)
         {
-             // Try legacy REST API path if 404
-             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-             {
-                 response = await client.PostAsync("rest/com/vmware/cis/session", null, cancellationToken);
-             }
+            // Try legacy REST API path if 404
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                response = await client.PostAsync("rest/com/vmware/cis/session", null, cancellationToken);
+            }
         }
-        
+
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -128,14 +132,13 @@ public class VSphereService : IVSphereService
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        // Parse JSON. Structure is usually { value: [ ... ] }
         using var doc = JsonDocument.Parse(content);
         var vms = new List<VmInfo>();
-        
+
         // Handle both array directly or wrapped in "value"
         JsonElement root = doc.RootElement;
         JsonElement items = root;
-        
+
         if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("value", out var valueArray))
         {
             items = valueArray;
@@ -150,7 +153,7 @@ public class VSphereService : IVSphereService
                     Id = element.TryGetProperty("vm", out var vmId) ? vmId.GetString() ?? "" : "",
                     Name = element.TryGetProperty("name", out var name) ? name.GetString() ?? "" : "",
                     PowerState = element.TryGetProperty("power_state", out var state) ? state.GetString() ?? "" : "UNKNOWN",
-                    ProvisionedBytes = 0 // API might not return this directly in list
+                    ProvisionedBytes = 0
                 });
             }
         }
@@ -160,14 +163,14 @@ public class VSphereService : IVSphereService
     public async Task<Guid> ExportVmAsync(string sessionId, string vmId, string vmName, CancellationToken cancellationToken)
     {
         var session = _sessionStore.Get(sessionId) ?? throw new UnauthorizedAccessException("Invalid Session");
-        
+
         // Create a task to track progress
         var task = _taskStore.Create(sessionId, vmId);
-        
+
         // Run export in background
-        _ = Task.Run(async () => 
+        _ = Task.Run(async () =>
         {
-            try 
+            try
             {
                 await PerformExport(session, vmId, vmName, task);
             }
@@ -192,44 +195,50 @@ public class VSphereService : IVSphereService
 
         var tempDir = Path.Combine(Path.GetTempPath(), "exports", task.Id.ToString());
         Directory.CreateDirectory(tempDir);
-        
+
         // Use vmName for the file name if provided, otherwise fallback to vmId
         var fileName = string.IsNullOrWhiteSpace(vmName) ? vmId : vmName;
         // Sanitize filename to remove invalid characters
         fileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));
-        
+
         var ovaPath = Path.Combine(tempDir, $"{fileName}.ova");
         var success = false;
 
         try
         {
-            // Construct OVF Tool command
-            // vi://user:pass@host/?moref=vmId
             var userEncoded = System.Net.WebUtility.UrlEncode(session.Username);
             var passEncoded = System.Net.WebUtility.UrlEncode(session.Password);
-            
-            // Log debug info (mask password)
+
             Console.WriteLine($"[Export Debug] VM ID: {vmId}, Name: {vmName}");
-            
+
             // Try adding type prefix for OVF Tool
             var moref = vmId.StartsWith("vim.VirtualMachine:") ? vmId : $"vim.VirtualMachine:{vmId}";
             var source = $"vi://{userEncoded}:{passEncoded}@{session.Host}/?moref={moref}";
 
             Console.WriteLine($"[Export Debug] Source URL: vi://{userEncoded}:***@{session.Host}/?moref={moref}");
 
+            // Use ArgumentList to prevent shell injection — do NOT use Arguments (string)
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "ovftool",
-                Arguments = $"--acceptAllEulas --noSSLVerify --diskMode=thin --powerOffSource --X:vimSessionTimeout=1 --X:connectionReconnectCount=3 \"{source}\" \"{ovaPath}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
 
+            processStartInfo.ArgumentList.Add("--acceptAllEulas");
+            processStartInfo.ArgumentList.Add("--noSSLVerify");
+            processStartInfo.ArgumentList.Add("--diskMode=thin");
+            processStartInfo.ArgumentList.Add("--powerOffSource");
+            processStartInfo.ArgumentList.Add("--X:vimSessionTimeout=1");
+            processStartInfo.ArgumentList.Add("--X:connectionReconnectCount=3");
+            processStartInfo.ArgumentList.Add(source);
+            processStartInfo.ArgumentList.Add(ovaPath);
+
             using var process = new Process { StartInfo = processStartInfo };
-            
-            process.OutputDataReceived += (sender, e) => 
+
+            process.OutputDataReceived += (sender, e) =>
             {
                 if (e.Data != null)
                 {
@@ -244,7 +253,7 @@ public class VSphereService : IVSphereService
                     }
                 }
             };
-            
+
             process.ErrorDataReceived += (sender, e) =>
             {
                 if (e.Data != null) Console.WriteLine($"[OVFTool Error] {e.Data}");
@@ -253,12 +262,12 @@ public class VSphereService : IVSphereService
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-            
+
             await process.WaitForExitAsync();
 
             if (process.ExitCode != 0)
             {
-                throw new Exception($"OVF Tool failed with exit code {process.ExitCode}");
+                throw new InvalidOperationException($"OVF Tool 執行失敗，結束碼: {process.ExitCode}");
             }
 
             // Upload to Minio
@@ -267,12 +276,12 @@ public class VSphereService : IVSphereService
 
             var bucketName = "exports";
             await _minioService.EnsureBucketExistsAsync(bucketName, CancellationToken.None);
-            
+
             var objectName = $"{fileName}.ova";
             using var stream = File.OpenRead(ovaPath);
-            
+
             await _minioService.UploadAsync(bucketName, objectName, stream, CancellationToken.None);
-            
+
             task.Progress = 100;
             task.Status = ExportTaskStatus.Completed;
             task.DownloadUrl = await _minioService.GetPresignedUrlAsync(bucketName, objectName, TimeSpan.FromHours(1));
