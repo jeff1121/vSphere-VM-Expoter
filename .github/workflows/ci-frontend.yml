@@ -16,6 +16,8 @@ jobs:
   lint-and-test:
     name: Lint 與單元測試
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     defaults:
       run:

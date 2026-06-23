@@ -16,6 +16,8 @@ jobs:
   build-and-test:
     name: 建置並執行後端測試
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: 簽出程式碼
